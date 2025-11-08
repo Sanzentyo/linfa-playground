@@ -26,6 +26,9 @@ fn main() -> anyhow::Result<()> {
     let mut windows_per_label: Vec<Vec<[f32; 9]>> = vec![Vec::new(); mapping.len()];
 
     let data_dir = Path::new("data");
+    if !data_dir.exists() {
+        anyhow::bail!("data directory not found: {}", data_dir.display());
+    }
     for (file_name, label) in mapping.iter() {
         let path = data_dir.join(file_name);
         if !path.exists() {
