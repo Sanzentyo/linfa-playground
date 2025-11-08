@@ -22,8 +22,8 @@ fn main() -> anyhow::Result<()> {
         ("four-legged-walking.csv", 4usize),
     ];
 
-    let mut features: Vec<[f32; 6]> = Vec::new();
-    let mut labels: Vec<usize> = Vec::new();
+    // Collect windows per label first for balancing
+    let mut windows_per_label: Vec<Vec<[f32; 9]>> = vec![Vec::new(); mapping.len()];
 
     let data_dir = Path::new("data");
     for (file_name, label) in mapping.iter() {
@@ -40,25 +40,63 @@ fn main() -> anyhow::Result<()> {
             .into_iter()
             .collect::<Result<Vec<AccelData>, csv::Error>>()?;
 
+        if csv_data.is_empty() {
+            eprintln!("warning: {} empty, skipping", path.display());
+            continue;
+        }
+
+        // Skip first and last 1 second based on timestamp
+        let min_ts = csv_data.iter().map(|r| r.timestamp).min().unwrap();
+        let max_ts = csv_data.iter().map(|r| r.timestamp).max().unwrap();
+        let start_cut = min_ts + 1000; // assume millis
+        let end_cut = max_ts.saturating_sub(1000);
+        let filtered: Vec<AccelData> = csv_data
+            .into_iter()
+            .filter(|r| r.timestamp > start_cut && r.timestamp < end_cut)
+            .collect();
+
+        if filtered.len() < WINDOW_SIZE {
+            eprintln!("warning: {} insufficient data after trimming, skipping", path.display());
+            continue;
+        }
+
         // non-overlapping windows
         let mut i = 0usize;
-        while i + WINDOW_SIZE <= csv_data.len() {
-            let window = &csv_data[i..i + WINDOW_SIZE];
+        while i + WINDOW_SIZE <= filtered.len() {
+            let window = &filtered[i..i + WINDOW_SIZE];
             let feat = linfa_playground::extract_window_features(window);
-            features.push(feat);
-            labels.push(*label);
+            windows_per_label[*label].push(feat);
             i += WINDOW_SIZE / 2; // stride == WINDOW_SIZE / 2
         }
     }
-
-    if features.is_empty() {
+    // Balance classes: find minimum window count > 0
+    let mut rng_balance = SmallRng::seed_from_u64(7);
+    let counts: Vec<usize> = windows_per_label.iter().map(|v| v.len()).collect();
+    let non_zero: Vec<usize> = counts.iter().cloned().filter(|&c| c > 0).collect();
+    if non_zero.is_empty() {
         anyhow::bail!("no feature windows extracted — check data files");
+    }
+    let target = *non_zero.iter().min().unwrap();
+    if target == 0 {
+        anyhow::bail!("no usable data after trimming");
+    }
+    let mut features: Vec<[f32; 9]> = Vec::new();
+    let mut labels: Vec<usize> = Vec::new();
+    for (label_idx, feats) in windows_per_label.into_iter().enumerate() {
+        if feats.is_empty() { continue; }
+        let mut feats_mut = feats;
+        use rand::seq::SliceRandom;
+        feats_mut.shuffle(&mut rng_balance);
+        for f in feats_mut.into_iter().take(target) {
+            features.push(f);
+            labels.push(label_idx);
+        }
     }
 
     let n_samples = features.len();
-    let mut feature_array = Array2::<f32>::zeros((n_samples, 6));
+    let mut feature_array = Array2::<f32>::zeros((n_samples, 9));
     for (i, f) in features.iter().enumerate() {
-        for j in 0..6 {
+        for j in 0..9 {
             feature_array[[i, j]] = f[j];
         }
     }

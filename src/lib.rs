@@ -8,35 +8,38 @@ pub struct AccelData {
 
 pub const WINDOW_SIZE: usize = 64;
 
-pub fn extract_window_features(window: &[AccelData]) -> [f32; 6] {
-    // mean_x, mean_y, mean_z, std_x, std_y, std_z
+pub fn extract_window_features(window: &[AccelData]) -> [f32; 9] {
+    // xmin, xmax, xave, ymin, ymax, yave, zmin, zmax, zave
     let n = window.len() as f32;
     let mut sum_x = 0f32;
     let mut sum_y = 0f32;
     let mut sum_z = 0f32;
+
+    let mut min_x = f32::INFINITY;
+    let mut max_x = f32::NEG_INFINITY;
+    let mut min_y = f32::INFINITY;
+    let mut max_y = f32::NEG_INFINITY;
+    let mut min_z = f32::INFINITY;
+    let mut max_z = f32::NEG_INFINITY;
+
     for r in window.iter() {
         sum_x += r.accel_x;
         sum_y += r.accel_y;
         sum_z += r.accel_z;
-    }
-    let mean_x = sum_x / n;
-    let mean_y = sum_y / n;
-    let mean_z = sum_z / n;
 
-    let mut var_x = 0f32;
-    let mut var_y = 0f32;
-    let mut var_z = 0f32;
-    for r in window.iter() {
-        var_x += (r.accel_x - mean_x).powi(2);
-        var_y += (r.accel_y - mean_y).powi(2);
-        var_z += (r.accel_z - mean_z).powi(2);
+        if r.accel_x < min_x { min_x = r.accel_x; }
+        if r.accel_x > max_x { max_x = r.accel_x; }
+        if r.accel_y < min_y { min_y = r.accel_y; }
+        if r.accel_y > max_y { max_y = r.accel_y; }
+        if r.accel_z < min_z { min_z = r.accel_z; }
+        if r.accel_z > max_z { max_z = r.accel_z; }
     }
-    // population std (divide by n), then sqrt
-    let std_x = (var_x / n).sqrt();
-    let std_y = (var_y / n).sqrt();
-    let std_z = (var_z / n).sqrt();
 
-    [mean_x, mean_y, mean_z, std_x, std_y, std_z]
+    let ave_x = sum_x / n;
+    let ave_y = sum_y / n;
+    let ave_z = sum_z / n;
+
+    [min_x, max_x, ave_x, min_y, max_y, ave_y, min_z, max_z, ave_z]
 }
 
 #[derive(bincode::Encode, bincode::Decode)]
@@ -77,7 +80,7 @@ pub fn predict_activity(features: Vec<f32>) -> i32 {
 
         bincode_model.0.tree
     });
-    let feature_array = ndarray::Array2::from_shape_vec((1, 6), features).unwrap();
+    let feature_array = ndarray::Array2::from_shape_vec((1, 9), features).unwrap();
     model.predict(&feature_array)[0] as i32
 }
 

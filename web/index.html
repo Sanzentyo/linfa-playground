@@ -62,14 +62,14 @@
 
 <body>
   <h1>Activity prediction (WASM)</h1>
-  <p class="muted">このデモは Rust の <code>wasm-bindgen</code> 経由で、事前学習済みの決定木モデルに 6 次元の特徴量を渡して予測します。</p>
+  <p class="muted">このデモは Rust の <code>wasm-bindgen</code> 経由で、事前学習済みの決定木モデルに 9 次元（xmin/xmax/xave, ymin/ymax/yave, zmin/zmax/zave）の特徴量を渡して予測します。</p>
 
   <div class="card">
     <p> モデルのロード時間の計測</p>
     <button id="load-model">モデルをロードする</button>
     <div id="load-time"></div>
     <p>
-      6 要素のランダムなダミー特徴量を生成して <code>predict_activity(features: f32[6])</code> を呼び出します。
+      9 要素のランダムなダミー特徴量を生成して <code>predict_activity(features: f32[9])</code> を呼び出します。
     </p>
     <button id="run">ランダムに予測する</button>
 

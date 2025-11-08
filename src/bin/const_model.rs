@@ -23,7 +23,7 @@ fn main() -> Result<()> {
         .collect::<Vec<linfa_playground::AccelData>>();
 
     let feat = linfa_playground::extract_window_features(&example_features);
-    let feature_array = ndarray::Array2::from_shape_vec((1, 6), feat.to_vec())?;
+    let feature_array = ndarray::Array2::from_shape_vec((1, 9), feat.to_vec())?;
 
     let result = model.predict(&feature_array);
     let predicted_label = result[0];

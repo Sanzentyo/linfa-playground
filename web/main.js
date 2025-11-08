@@ -1,11 +1,17 @@
 import init, { predict_activity, predict_activity_from_rawdata, load_model } from "../pkg/linfa_playground.js";
 
-// Utility: generate an array of 6 float32 values in a reasonable range
+// Utility: generate an array of 9 float32 values (xmin,xmax,xave, ... for x/y/z)
 function randomFeatures() {
-    // mean_x, mean_y, mean_z in [-1.5, 1.5], std_x, std_y, std_z in [0, 2]
-    const means = Array.from({ length: 3 }, () => (Math.random() * 3 - 1.5));
-    const stds = Array.from({ length: 3 }, () => (Math.random() * 2));
-    return new Float32Array([...means, ...stds]);
+  const out = [];
+  for (let axis = 0; axis < 3; axis++) {
+    const center = Math.random() * 3 - 1.5;   // [-1.5, 1.5]
+    const halfRange = Math.random() * 2;      // [0, 2]
+    const min = center - halfRange;
+    const max = center + halfRange;
+    const ave = min + Math.random() * (max - min);
+    out.push(min, max, ave);
+  }
+  return new Float32Array(out);
 }
 
 function renderResult(root, features, pred, elapsed) {
@@ -16,12 +22,15 @@ function renderResult(root, features, pred, elapsed) {
         <tr><th>feature</th><th>value</th></tr>
       </thead>
       <tbody>
-        <tr><td>mean_x</td><td>${feat[0]}</td></tr>
-        <tr><td>mean_y</td><td>${feat[1]}</td></tr>
-        <tr><td>mean_z</td><td>${feat[2]}</td></tr>
-        <tr><td>std_x</td><td>${feat[3]}</td></tr>
-        <tr><td>std_y</td><td>${feat[4]}</td></tr>
-        <tr><td>std_z</td><td>${feat[5]}</td></tr>
+        <tr><td>xmin</td><td>${feat[0]}</td></tr>
+        <tr><td>xmax</td><td>${feat[1]}</td></tr>
+        <tr><td>xave</td><td>${feat[2]}</td></tr>
+        <tr><td>ymin</td><td>${feat[3]}</td></tr>
+        <tr><td>ymax</td><td>${feat[4]}</td></tr>
+        <tr><td>yave</td><td>${feat[5]}</td></tr>
+        <tr><td>zmin</td><td>${feat[6]}</td></tr>
+        <tr><td>zmax</td><td>${feat[7]}</td></tr>
+        <tr><td>zave</td><td>${feat[8]}</td></tr>
       </tbody>
     </table>
     <p>予測クラス (数値ラベル): <strong>${pred}</strong></p>
@@ -52,7 +61,7 @@ async function main() {
     const loadTime = document.getElementById("load-time");
     const loadBtn = document.getElementById("load-model");
 
-    loadBtn.addEventListener("click", () => {
+  loadBtn.addEventListener("click", () => {
         const start = performance.now();
         load_model();
         const end = performance.now();
@@ -64,10 +73,10 @@ async function main() {
     const out = document.getElementById("out");
     const runBtn = document.getElementById("run");
 
-    runBtn.addEventListener("click", () => {
+  runBtn.addEventListener("click", () => {
         const start = performance.now();
         const f = randomFeatures();
-        // wasm-bindgen can accept a regular array or TypedArray for Vec<f32>
+    // wasm-bindgen can accept a regular array or TypedArray for Vec<f32>
         const pred = predict_activity(f);
         const end = performance.now();
         const elapsed = end - start;
