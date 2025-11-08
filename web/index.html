@@ -70,9 +70,13 @@
     <div id="load-time"></div>
     <p>
       6 要素のランダムなダミー特徴量を生成して <code>predict_activity(features: f32[6])</code> を呼び出します。
-      <button id="run">ランダムに予測する</button>
     </p>
+    <button id="run">ランダムに予測する</button>
+
     <div id="out"></div>
+    <p>xyzのランダムな値の列を生成し、モデルで予測を行います。</p>
+    <button id="run-raw">生データから予測する</button>
+    <div id="out-raw"></div>
   </div>
 
   <p class="muted">

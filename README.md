@@ -1,5 +1,7 @@
 # linfa-playground WASM demo
 
+# 注意: 以下のドキュメントは半分程度がLLMで生成されています
+
 ブラウザから `wasm-bindgen` で Rust の `predict_activity(features: Vec<f32>) -> u32` を呼び出し、ランダムなダミー特徴量で予測を表示する最小デモです。
 
 ## 要件
@@ -7,6 +9,26 @@
 - 任意の静的ファイルサーバ (例: Node.js の `npx serve`)
 
 ## ビルド
+### モデルの準備
+まず、リポジトリの直下に、`activity_decision_tree.bincode` を空ファイルでいいので作成しておきます。
+
+ヘッダが、`timestamp`, `accel_x`, `accel_y`, `accel_z`の順である CSV ファイル (例: `data/activity.csv`) を用意し、そのファイルとidをsrc/bin/make_decide_action_model.rs の 以下の部分と対応させてから、
+``` rs
+    // activity -> label mapping
+    let mapping = vec![
+        ("sit.csv", 0usize),
+        ("walk-with-hand.csv", 1usize),
+        ("walking-in-pocket.csv", 2usize),
+        ("climb-up.csv", 3usize),
+        ("four-legged-walking.csv", 4usize),
+    ];
+```
+これを、以下のコマンドで実行することで、`activity_decision_tree.bincode` にモデルのバイナリが保存されます。
+```
+cargo run --bin make_decide_action_model --release
+```
+
+生成された `activity_decision_tree.bincode`はconstとしてWASMバイナリに埋め込まれるので、モデルを更新する場合は以下のビルド手順を再度実行してください。
 
 ```
 # Web ターゲットでビルドして ./pkg を生成

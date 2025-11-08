@@ -66,7 +66,7 @@ pub fn load_model() {
 }
 
 #[wasm_bindgen]
-pub fn predict_activity(features: Vec<f32>) -> u32 {
+pub fn predict_activity(features: Vec<f32>) -> i32 {
     // decode the trained model from embedded bytes
     let model = ACTIVITY_MODEL.get_or_init(|| {
         let bincode_model = bincode::decode_from_slice::<BincodeDecisionTree, _>(
@@ -78,13 +78,15 @@ pub fn predict_activity(features: Vec<f32>) -> u32 {
         bincode_model.0.tree
     });
     let feature_array = ndarray::Array2::from_shape_vec((1, 6), features).unwrap();
-    model.predict(&feature_array)[0] as u32
+    model.predict(&feature_array)[0] as i32
 }
 
 #[wasm_bindgen]
-pub fn predict_activity_from_rawdata(data: Vec<f32>) -> u32 {
+pub fn predict_activity_from_rawdata(data: Vec<f32>) -> i32 {
+    // Use chunks_exact to avoid accidental indexing into a short remainder chunk.
+    // If the input length is not a multiple of 3 the remainder is ignored instead of panicking.
     let accel_data: Vec<AccelData> = data
-        .chunks(3)
+        .chunks_exact(3)
         .map(|chunk| AccelData {
             timestamp: 0,
             accel_x: chunk[0],
@@ -92,6 +94,12 @@ pub fn predict_activity_from_rawdata(data: Vec<f32>) -> u32 {
             accel_z: chunk[2],
         })
         .collect();
+
+    if accel_data.is_empty() {
+        // No valid triplets -> return -1
+        return -1;
+    }
+
     let features = extract_window_features(&accel_data);
     predict_activity(features.to_vec())
 }

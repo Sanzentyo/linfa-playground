@@ -1,4 +1,4 @@
-import init, { predict_activity, load_model } from "../pkg/linfa_playground.js";
+import init, { predict_activity, predict_activity_from_rawdata, load_model } from "../pkg/linfa_playground.js";
 
 // Utility: generate an array of 6 float32 values in a reasonable range
 function randomFeatures() {
@@ -27,6 +27,22 @@ function renderResult(root, features, pred, elapsed) {
     <p>予測クラス (数値ラベル): <strong>${pred}</strong></p>
     <p>予測にかかった時間: ${elapsed} ms</p>
   `;
+}
+
+// ランダムにxyzの値に相当するものの配列を生成し、モデルで予測を行う
+// ウィンドウサイズは50サンプル
+// 生成したデータも返す
+function runPredictionFromRandomRawData() {
+  const sampleCount = 50; // 1サンプル = (x,y,z) の3要素
+  const rawData = [];
+  for (let i = 0; i < sampleCount; i++) {
+    rawData.push(Math.random() * 3 - 1.5); // x
+    rawData.push(Math.random() * 3 - 1.5); // y
+    rawData.push(Math.random() * 3 - 1.5); // z
+  }
+  // これをモデルに渡して予測を行う (長さは sampleCount*3 で 3の倍数保証)
+  const pred = predict_activity_from_rawdata(new Float32Array(rawData));
+  return { pred, rawData };
 }
 
 async function main() {
@@ -59,8 +75,22 @@ async function main() {
         renderResult(out, f, pred, elapsed);
     });
 
-    // Run once on load
-    //runBtn.click();
+    const runRawBtn = document.getElementById("run-raw");
+    const outRaw = document.getElementById("out-raw");
+    runRawBtn.addEventListener("click", () => {
+        const start = performance.now();
+        const { pred, rawData } = runPredictionFromRandomRawData();
+        const end = performance.now();
+        const elapsed = end - start;
+        console.log(`Raw data prediction took ${elapsed} ms`);
+        outRaw.innerHTML = `
+      <p>生成した生データ (50サンプル):</p>
+      <pre>[${rawData.map(v => v.toFixed(4)).join(", ")}]</pre>
+      <p>予測クラス (数値ラベル): <strong>${pred}</strong></p>
+      <p>予測にかかった時間: ${elapsed} ms</p>
+    `;
+    });
+    
 }
 
 main().catch(err => {
